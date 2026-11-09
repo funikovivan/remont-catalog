@@ -4,45 +4,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Админка каталога</title>
-  <link rel="stylesheet" href="style.css">
   <style>
-    body { padding: 20px; font-family: sans-serif; }
-    .admin-box { background: white; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { background: #1a1a2e; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+    body { padding: 20px; font-family: sans-serif; background: #f4f4f9; }
+    .admin-box { background: white; padding: 20px; border-radius: 8px; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; flex-wrap: wrap; }
+    .tab { padding: 10px 15px; cursor: pointer; background: #eee; border-radius: 5px; font-weight: bold; }
+    .tab.active { background: #1a1a2e; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9em; }
+    input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background: #1a1a2e; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
     button:hover { background: #e63946; }
     .status { margin-top: 15px; font-weight: bold; color: green; text-align: center; }
+    .part-block { background: #f9f9f9; padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px; }
   </style>
 </head>
 <body>
   <div class="admin-box">
-    <h2>Добавить неисправность</h2>
-    
-    <label>Модель техники:</label>
-    <select id="modelSelect"></select>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('tab-type')">1. Категории</div>
+      <div class="tab" onclick="switchTab('tab-model')">2. Модели</div>
+      <div class="tab" onclick="switchTab('tab-fault')">3. Неисправности</div>
+      <div class="tab" onclick="switchTab('tab-part')">4. Запчасти</div>
+    </div>
 
-    <label>Название ошибки (например, Ошибка E21):</label>
-    <input type="text" id="title" placeholder="Ошибка E21...">
+    <!-- ВКЛАДКА 1: ТИПЫ -->
+    <div id="tab-type" class="tab-content active">
+      <h2>Добавить категорию (Стиралки, Холодильники...)</h2>
+      <label>Название категории:</label>
+      <input type="text" id="typeName" placeholder="Например: Пылесосы">
+      <button onclick="addType()">Создать категорию</button>
+    </div>
 
-    <label>Симптомы (через запятую):</label>
-    <textarea id="symptoms" rows="2" placeholder="Не сливает воду, Остановка"></textarea>
+    <!-- ВКЛАДКА 2: МОДЕЛИ -->
+    <div id="tab-model" class="tab-content">
+      <h2>Добавить модель</h2>
+      <label>Категория:</label>
+      <select id="modelType"></select>
+      <label>Бренд:</label>
+      <input type="text" id="modelBrand" placeholder="LG, Bosch...">
+      <label>Модель:</label>
+      <input type="text" id="modelName" placeholder="F2H5...">
+      <button onclick="addModel()">Создать модель</button>
+    </div>
 
-    <label>Причины (через запятую):</label>
-    <textarea id="causes" rows="2" placeholder="Засор фильтра, Сгорел насос"></textarea>
+    <!-- ВКЛАДКА 3: НЕИСПРАВНОСТИ -->
+    <div id="tab-fault" class="tab-content">
+      <h2>Добавить неисправность</h2>
+      <label>Модель:</label>
+      <select id="faultModel"></select>
+      <label>Название ошибки:</label>
+      <input type="text" id="faultTitle">
+      <label>Симптомы (через запятую):</label>
+      <input type="text" id="faultSymptoms">
+      <label>Причины (через запятую):</label>
+      <input type="text" id="faultCauses">
+      <label>Ремонт (через запятую):</label>
+      <input type="text" id="faultRepair">
+      <button onclick="addFault()">Создать неисправность</button>
+    </div>
 
-    <label>Диагностика (через запятую):</label>
-    <textarea id="diagnostics" rows="2" placeholder="Проверить фильтр, Прозвонить насос"></textarea>
+    <!-- ВКЛАДКА 4: ЗАПЧАСТИ -->
+    <div id="tab-part" class="tab-content">
+      <h2>Добавить запчасть к неисправности</h2>
+      <label>Выберите неисправность:</label>
+      <select id="partFault"></select>
+      
+      <div class="part-block">
+        <label>Тип (Оригинал, Аналог, Китай):</label>
+        <input type="text" id="partType">
+        <label>Название (фильтр, датчик...):</label>
+        <input type="text" id="partName">
+        <label>Цена:</label>
+        <input type="text" id="partPrice">
+        <label>Фото детали:</label>
+        <input type="file" id="partPhoto" accept="image/*">
+      </div>
+      
+      <button onclick="addPart()">Добавить запчасть</button>
+    </div>
 
-    <label>Ремонт (через запятую):</label>
-    <textarea id="repair" rows="2" placeholder="Очистить, Заменить"></textarea>
-
-    <label>Цена запчасти (текстом):</label>
-    <input type="text" id="price" placeholder="1500 руб.">
-
-    <label>Фото запчасти (выберите файл):</label>
-    <input type="file" id="photoFile" accept="image/*">
-
-    <button onclick="saveFault()">Сохранить в каталог</button>
     <div id="status" class="status"></div>
   </div>
 
@@ -52,82 +94,105 @@
     const SUPABASE_KEY = 'sb_publishable_PvcGTcQkzmnzLTl6H3ahNA_bwUMAGIX';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Загружаем список моделей для выпадающего списка
-    async function loadModels() {
-      const { data: models } = await supabaseClient.from('models').select('*');
-      const select = document.getElementById('modelSelect');
-      models.forEach(m => {
-        select.innerHTML += `<option value="${m.id}">${m.brand} ${m.model}</option>`;
-      });
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      loadDropdowns();
     }
-    window.onload = loadModels;
 
-    async function saveFault() {
-      const title = document.getElementById('title').value;
-      const symptoms = document.getElementById('symptoms').value.split(',').map(s => s.trim());
-      const causes = document.getElementById('causes').value.split(',').map(s => s.trim());
-      const diagnostics = document.getElementById('diagnostics').value.split(',').map(s => s.trim());
-      const repair = document.getElementById('repair').value.split(',').map(s => s.trim());
-      const price = document.getElementById('price').value;
-      const modelId = document.getElementById('modelSelect').value;
-      const fileInput = document.getElementById('photoFile');
-      const file = fileInput.files[0];
+    // Загружаем данные для выпадающих списков
+    async function loadDropdowns() {
+      const { data: types } = await supabaseClient.from('types').select('*');
+      const { data: models } = await supabaseClient.from('models').select('*');
+      const { data: faults } = await supabaseClient.from('faults').select('*');
 
-      if (!title || !modelId) { alert('Заполните название и выберите модель!'); return; }
+      const modelType = document.getElementById('modelType');
+      modelType.innerHTML = types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
-      let photoUrl = null;
+      const faultModel = document.getElementById('faultModel');
+      faultModel.innerHTML = models.map(m => `<option value="${m.id}">${m.brand} ${m.model}</option>`).join('');
 
-      // 1. Если есть фото - загружаем его в Supabase Storage
+      const partFault = document.getElementById('partFault');
+      partFault.innerHTML = faults.map(f => `<option value="${f.id}">${f.title}</option>`).join('');
+    }
+    window.onload = loadDropdowns;
+
+    function showStatus(msg) {
+      document.getElementById('status').innerText = msg;
+      setTimeout(() => document.getElementById('status').innerText = '', 3000);
+    }
+
+    // 1. ДОБАВИТЬ КАТЕГОРИЮ
+    async function addType() {
+      const name = document.getElementById('typeName').value;
+      if (!name) return;
+      const id = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '_' + Date.now();
+      await supabaseClient.from('types').insert([{ id, name }]);
+      document.getElementById('typeName').value = '';
+      showStatus('✅ Категория добавлена');
+      loadDropdowns();
+    }
+
+    // 2. ДОБАВИТЬ МОДЕЛЬ
+    async function addModel() {
+      const type_id = document.getElementById('modelType').value;
+      const brand = document.getElementById('modelBrand').value;
+      const model = document.getElementById('modelName').value;
+      if (!brand || !model) return;
+      const id = brand.toLowerCase() + '_' + Date.now();
+      await supabaseClient.from('models').insert([{ id, type_id, brand, model }]);
+      document.getElementById('modelBrand').value = '';
+      document.getElementById('modelName').value = '';
+      showStatus('✅ Модель добавлена');
+      loadDropdowns();
+    }
+
+    // 3. ДОБАВИТЬ НЕИСПРАВНОСТЬ
+    async function addFault() {
+      const model_id = document.getElementById('faultModel').value;
+      const title = document.getElementById('faultTitle').value;
+      const symptoms = document.getElementById('faultSymptoms').value.split(',').map(s => s.trim());
+      const causes = document.getElementById('faultCauses').value.split(',').map(s => s.trim());
+      const repair = document.getElementById('faultRepair').value.split(',').map(s => s.trim());
+      if (!title) return;
+      const id = 'f_' + Date.now();
+      
+      await supabaseClient.from('faults').insert([{ id, title, symptoms, causes, diagnostics: [], repair }]);
+      await supabaseClient.from('model_faults').insert([{ model_id, fault_id: id }]);
+      
+      document.getElementById('faultTitle').value = '';
+      showStatus('✅ Неисправность добавлена');
+      loadDropdowns();
+    }
+
+    // 4. ДОБАВИТЬ ЗАПЧАСТЬ
+    async function addPart() {
+      const fault_id = document.getElementById('partFault').value;
+      const part_type = document.getElementById('partType').value;
+      const name = document.getElementById('partName').value;
+      const price = document.getElementById('partPrice').value;
+      const file = document.getElementById('partPhoto').files[0];
+      
+      if (!name || !price) return;
+
+      let photo_url = null;
       if (file) {
-        document.getElementById('status').innerText = 'Загрузка фото...';
         const fileName = `${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabaseClient.storage
-          .from('photos')
-          .upload(fileName, file);
-        
-        if (uploadError) { alert('Ошибка загрузки фото: ' + uploadError.message); return; }
-
-        const { data: urlData } = supabaseClient.storage.from('photos').getPublicUrl(fileName);
-        photoUrl = urlData.publicUrl;
+        const { error: uploadError } = await supabaseClient.storage.from('photos').upload(fileName, file);
+        if (!uploadError) {
+          const { data: urlData } = supabaseClient.storage.from('photos').getPublicUrl(fileName);
+          photo_url = urlData.publicUrl;
+        }
       }
 
-      // 2. Генерируем уникальный ID для ошибки
-      const faultId = 'f_' + Date.now();
-
-      // 3. Сохраняем саму неисправность
-      document.getElementById('status').innerText = 'Сохранение данных...';
-      const { error: faultError } = await supabaseClient.from('faults').insert([{
-        id: faultId,
-        title: title,
-        symptoms: symptoms,
-        causes: causes,
-        diagnostics: diagnostics,
-        repair: repair,
-        part_price: price,
-        photo_url: photoUrl
-      }]);
-
-      if (faultError) { alert('Ошибка базы: ' + faultError.message); return; }
-
-      // 4. Привязываем ошибку к выбранной модели
-      const { error: linkError } = await supabaseClient.from('model_faults').insert([{
-        model_id: modelId,
-        fault_id: faultId
-      }]);
-
-      if (linkError) { alert('Ошибка привязки: ' + linkError.message); return; }
-
-      document.getElementById('status').innerText = '✅ Успешно добавлено на сайт!';
-      setTimeout(() => document.getElementById('status').innerText = '', 3000);
+      await supabaseClient.from('parts').insert([{ fault_id, part_type, name, price, photo_url }]);
       
-      // Очищаем поля
-      document.getElementById('title').value = '';
-      document.getElementById('symptoms').value = '';
-      document.getElementById('causes').value = '';
-      document.getElementById('diagnostics').value = '';
-      document.getElementById('repair').value = '';
-      document.getElementById('price').value = '';
-      document.getElementById('photoFile').value = '';
+      document.getElementById('partName').value = '';
+      document.getElementById('partPrice').value = '';
+      document.getElementById('partPhoto').value = '';
+      showStatus('✅ Запчасть добавлена');
     }
   </script>
 </body>
