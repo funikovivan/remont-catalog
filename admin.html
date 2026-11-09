@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админка каталога</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { padding: 20px; font-family: sans-serif; }
+    .admin-box { background: white; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background: #1a1a2e; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+    button:hover { background: #e63946; }
+    .status { margin-top: 15px; font-weight: bold; color: green; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="admin-box">
+    <h2>Добавить неисправность</h2>
+    
+    <label>Модель техники:</label>
+    <select id="modelSelect"></select>
+
+    <label>Название ошибки (например, Ошибка E21):</label>
+    <input type="text" id="title" placeholder="Ошибка E21...">
+
+    <label>Симптомы (через запятую):</label>
+    <textarea id="symptoms" rows="2" placeholder="Не сливает воду, Остановка"></textarea>
+
+    <label>Причины (через запятую):</label>
+    <textarea id="causes" rows="2" placeholder="Засор фильтра, Сгорел насос"></textarea>
+
+    <label>Диагностика (через запятую):</label>
+    <textarea id="diagnostics" rows="2" placeholder="Проверить фильтр, Прозвонить насос"></textarea>
+
+    <label>Ремонт (через запятую):</label>
+    <textarea id="repair" rows="2" placeholder="Очистить, Заменить"></textarea>
+
+    <label>Цена запчасти (текстом):</label>
+    <input type="text" id="price" placeholder="1500 руб.">
+
+    <label>Фото запчасти (выберите файл):</label>
+    <input type="file" id="photoFile" accept="image/*">
+
+    <button onclick="saveFault()">Сохранить в каталог</button>
+    <div id="status" class="status"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://afkftosxzriipoijuxbh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_PvcGTcQkzmnzLTl6H3ahNA_bwUMAGIX';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Загружаем список моделей для выпадающего списка
+    async function loadModels() {
+      const { data: models } = await supabaseClient.from('models').select('*');
+      const select = document.getElementById('modelSelect');
+      models.forEach(m => {
+        select.innerHTML += `<option value="${m.id}">${m.brand} ${m.model}</option>`;
+      });
+    }
+    window.onload = loadModels;
+
+    async function saveFault() {
+      const title = document.getElementById('title').value;
+      const symptoms = document.getElementById('symptoms').value.split(',').map(s => s.trim());
+      const causes = document.getElementById('causes').value.split(',').map(s => s.trim());
+      const diagnostics = document.getElementById('diagnostics').value.split(',').map(s => s.trim());
+      const repair = document.getElementById('repair').value.split(',').map(s => s.trim());
+      const price = document.getElementById('price').value;
+      const modelId = document.getElementById('modelSelect').value;
+      const fileInput = document.getElementById('photoFile');
+      const file = fileInput.files[0];
+
+      if (!title || !modelId) { alert('Заполните название и выберите модель!'); return; }
+
+      let photoUrl = null;
+
+      // 1. Если есть фото - загружаем его в Supabase Storage
+      if (file) {
+        document.getElementById('status').innerText = 'Загрузка фото...';
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+          .from('photos')
+          .upload(fileName, file);
+        
+        if (uploadError) { alert('Ошибка загрузки фото: ' + uploadError.message); return; }
+
+        const { data: urlData } = supabaseClient.storage.from('photos').getPublicUrl(fileName);
+        photoUrl = urlData.publicUrl;
+      }
+
+      // 2. Генерируем уникальный ID для ошибки
+      const faultId = 'f_' + Date.now();
+
+      // 3. Сохраняем саму неисправность
+      document.getElementById('status').innerText = 'Сохранение данных...';
+      const { error: faultError } = await supabaseClient.from('faults').insert([{
+        id: faultId,
+        title: title,
+        symptoms: symptoms,
+        causes: causes,
+        diagnostics: diagnostics,
+        repair: repair,
+        part_price: price,
+        photo_url: photoUrl
+      }]);
+
+      if (faultError) { alert('Ошибка базы: ' + faultError.message); return; }
+
+      // 4. Привязываем ошибку к выбранной модели
+      const { error: linkError } = await supabaseClient.from('model_faults').insert([{
+        model_id: modelId,
+        fault_id: faultId
+      }]);
+
+      if (linkError) { alert('Ошибка привязки: ' + linkError.message); return; }
+
+      document.getElementById('status').innerText = '✅ Успешно добавлено на сайт!';
+      setTimeout(() => document.getElementById('status').innerText = '', 3000);
+      
+      // Очищаем поля
+      document.getElementById('title').value = '';
+      document.getElementById('symptoms').value = '';
+      document.getElementById('causes').value = '';
+      document.getElementById('diagnostics').value = '';
+      document.getElementById('repair').value = '';
+      document.getElementById('price').value = '';
+      document.getElementById('photoFile').value = '';
+    }
+  </script>
+</body>
+</html>
