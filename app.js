@@ -1,18 +1,28 @@
+const SUPABASE_URL = 'https://afkftosxzriipoijuxbh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_PvcGTcQkzmnzLTl6H3ahNA_bwUMAGIX';
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const app = document.getElementById('app');
 const searchInput = document.getElementById('search');
 const versionBadge = document.getElementById('version-badge');
 
-let catalogData = null;
+let allData = { types: [], models: [], faults: [], modelFaults: [] };
 let currentView = { type: 'home' };
 
-async function loadCatalog() {
+async function loadData() {
   try {
-    const response = await fetch('catalog.json');
-    catalogData = await response.json();
-    versionBadge.textContent = `v${catalogData.version}`;
+    // Загружаем данные из базы Supabase
+    const { data: types } = await supabaseClient.from('types').select('*');
+    const { data: models } = await supabaseClient.from('models').select('*');
+    const { data: faults } = await supabaseClient.from('faults').select('*');
+    const { data: modelFaults } = await supabaseClient.from('model_faults').select('*');
+
+    allData = { types, models, faults, modelFaults };
+    versionBadge.textContent = 'Онлайн';
     renderHome();
   } catch (error) {
-    app.innerHTML = '<p>Ошибка загрузки каталога.</p>';
+    app.innerHTML = '<p>Ошибка загрузки данных. Проверьте интернет.</p>';
     console.error(error);
   }
 }
@@ -21,8 +31,8 @@ function renderHome() {
   currentView = { type: 'home' };
   searchInput.value = '';
   let html = '';
-  catalogData.types.forEach(type => {
-    html += `<div class="tile" onclick="renderModels('${type.id}')"><h2>${type.name}</h2><p>Посмотреть модели и неисправности</p></div>`;
+  allData.types.forEach(type => {
+    html += `<div class="tile" onclick="renderModels('${type.id}')"><h2>${type.name}</h2><p>Посмотреть модели</p></div>`;
   });
   app.innerHTML = html;
 }
@@ -30,7 +40,7 @@ function renderHome() {
 function renderModels(typeId) {
   currentView = { type: 'models', typeId };
   searchInput.value = '';
-  const models = catalogData.models.filter(m => m.typeId === typeId);
+  const models = allData.models.filter(m => m.type_id === typeId);
   let html = `<button class="back-btn" onclick="renderHome()">← Назад к категориям</button>`;
   
   if (models.length === 0) html += '<p>Модели пока не добавлены.</p>';
@@ -44,11 +54,11 @@ function renderModels(typeId) {
 function renderFaults(modelId) {
   currentView = { type: 'faults', modelId };
   searchInput.value = '';
-  const model = catalogData.models.find(m => m.id === modelId);
-  const faultIds = catalogData.modelFaults.filter(mf => mf.modelId === modelId).map(mf => mf.faultId);
-  const faults = catalogData.faults.filter(f => faultIds.includes(f.id));
+  const model = allData.models.find(m => m.id === modelId);
+  const faultIds = allData.modelFaults.filter(mf => mf.model_id === modelId).map(mf => mf.fault_id);
+  const faults = allData.faults.filter(f => faultIds.includes(f.id));
   
-  let html = `<button class="back-btn" onclick="renderModels('${model.typeId}')">← Назад к моделям</button>`;
+  let html = `<button class="back-btn" onclick="renderModels('${model.type_id}')">← Назад к моделям</button>`;
   html += `<h2 style="margin-bottom:15px;">${model.brand} ${model.model}</h2>`;
   
   if (faults.length === 0) html += '<p>Для этой модели неисправности пока не описаны.</p>';
@@ -61,43 +71,36 @@ function renderFaultCard(fault) {
   return `
     <div class="fault-card">
       <h3>${fault.title}</h3>
-      <strong>Симптомы:</strong><ul>${fault.symptoms.map(s => `<li>${s}</li>`).join('')}</ul>
-      <strong>Причины:</strong><ul>${fault.causes.map(s => `<li>${s}</li>`).join('')}</ul>
-      <strong>Диагностика:</strong><ul>${fault.diagnostics.map(s => `<li>${s}</li>`).join('')}</ul>
-      <strong>Ремонт:</strong><ul>${fault.repair.map(s => `<li>${s}</li>`).join('')}</ul>
-      ${fault.parts && fault.parts.length ? `<strong>Запчасти:</strong><ul>${fault.parts.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+      ${fault.photo_url ? `<img src="${fault.photo_url}" style="max-width:100%; border-radius:8px; margin-bottom:10px;">` : ''}
+      <strong>Симптомы:</strong><ul>${fault.symptoms ? fault.symptoms.map(s => `<li>${s}</li>`).join('') : ''}</ul>
+      <strong>Причины:</strong><ul>${fault.causes ? fault.causes.map(c => `<li>${c}</li>`).join('') : ''}</ul>
+      <strong>Диагностика:</strong><ul>${fault.diagnostics ? fault.diagnostics.map(d => `<li>${d}</li>`).join('') : ''}</ul>
+      <strong>Ремонт:</strong><ul>${fault.repair ? fault.repair.map(r => `<li>${r}</li>`).join('') : ''}</ul>
     </div>
   `;
 }
 
 searchInput.addEventListener('input', (e) => {
   const query = e.target.value.toLowerCase().trim();
-  if (query === '') {
+  if (query === '') { 
     if (currentView.type === 'home') renderHome();
     else if (currentView.type === 'models') renderModels(currentView.typeId);
     else if (currentView.type === 'faults') renderFaults(currentView.modelId);
-    return;
+    return; 
   }
-
-  const results = catalogData.faults.filter(f => {
+  
+  const results = allData.faults.filter(f => {
     const titleMatch = f.title.toLowerCase().includes(query);
-    const symptomMatch = f.symptoms.some(s => s.toLowerCase().includes(query));
-    const causeMatch = f.causes.some(c => c.toLowerCase().includes(query));
+    const symptomMatch = f.symptoms ? f.symptoms.some(s => s.toLowerCase().includes(query)) : false;
+    const causeMatch = f.causes ? f.causes.some(c => c.toLowerCase().includes(query)) : false;
     return titleMatch || symptomMatch || causeMatch;
   });
 
-  if (results.length === 0) {
-    app.innerHTML = '<p>Ничего не найдено.</p>';
-    return;
-  }
-
+  if (results.length === 0) { app.innerHTML = '<p>Ничего не найдено.</p>'; return; }
+  
   let html = '<h2 style="margin-bottom:15px;">Результаты поиска:</h2>';
   results.forEach(fault => { html += renderFaultCard(fault); });
   app.innerHTML = html;
 });
 
-window.addEventListener('DOMContentLoaded', loadCatalog);
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed', err));
-}
+window.addEventListener('DOMContentLoaded', loadData);
