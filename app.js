@@ -140,3 +140,5 @@ searchInput.addEventListener('input', (e) => {
 });
 
 window.addEventListener('DOMContentLoaded', loadData);
+
+
