@@ -12,7 +12,6 @@ let currentView = { type: 'home' };
 
 async function loadData() {
   try {
-    // Загружаем данные из базы Supabase
     const { data: types } = await supabaseClient.from('types').select('*');
     const { data: models } = await supabaseClient.from('models').select('*');
     const { data: faults } = await supabaseClient.from('faults').select('*');
@@ -71,11 +70,17 @@ function renderFaultCard(fault) {
   return `
     <div class="fault-card">
       <h3>${fault.title}</h3>
-      ${fault.photo_url ? `<img src="${fault.photo_url}" style="max-width:100%; border-radius:8px; margin-bottom:10px;">` : ''}
+      
+      <!-- Вывод фотографии запчасти, если ссылка есть -->
+      ${fault.photo_url ? `<img src="${fault.photo_url}" style="max-width:100%; border-radius:8px; margin-bottom:10px;" alt="Запчасть">` : ''}
+      
       <strong>Симптомы:</strong><ul>${fault.symptoms ? fault.symptoms.map(s => `<li>${s}</li>`).join('') : ''}</ul>
       <strong>Причины:</strong><ul>${fault.causes ? fault.causes.map(c => `<li>${c}</li>`).join('') : ''}</ul>
       <strong>Диагностика:</strong><ul>${fault.diagnostics ? fault.diagnostics.map(d => `<li>${d}</li>`).join('') : ''}</ul>
       <strong>Ремонт:</strong><ul>${fault.repair ? fault.repair.map(r => `<li>${r}</li>`).join('') : ''}</ul>
+      
+      <!-- Вывод цены, если она указана -->
+      ${fault.part_price ? `<div style="margin-top: 15px; padding: 10px; background: #eef; border-radius: 8px; font-weight: bold; color: #1a1a2e;">💰 Стоимость запчасти: ${fault.part_price}</div>` : ''}
     </div>
   `;
 }
